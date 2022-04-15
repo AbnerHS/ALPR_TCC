@@ -7,17 +7,11 @@ def encontrarPlaca(img):
     weights = "yolo/yolov3_training_6000.weights"
     cfg = "yolo/yolov3_training.cfg"
     net = cv2.dnn.readNet(weights, cfg)
-
-    images_path = glob.glob("imagens/*.jpg")
-
     layer_names = net.getLayerNames()
     output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
     classes = ['mercosul','antiga']
-    # for img_path in images_path:
-        # Loading image
-        # img = cv2.imread(img_path)
-        # img = cv2.resize(img, None, fx=0.4, fy=0.4)
-    height, width, channels = img.shape
+    
+    height, width, _ = img.shape
 
     blob = cv2.dnn.blobFromImage(img, 1/255, (416, 416), (0, 0, 0), True, crop=False)
     net.setInput(blob)
