@@ -64,6 +64,47 @@ def bounding_box(img, pontos_x, pontos_y):
     cv2.rectangle(img, (x, y), (w, h), (0, 255, 0), 1)
   return img
 
+def eliminarFalsoCaracteres(img, pontos_x):
+  for i in range(0, len(pontos_x)-1, 2):
+    imgCopy = img.copy()
+    imgCopy = imgCopy[:,pontos_x[i]:pontos_x[i+1]]
+    height, width = imgCopy.shape
+    lista_projecao_h = projecaoHorizontal(imgCopy, width, height)
+    if sum(lista_projecao_h) < 20:
+      pontos_x[i] = -1
+      pontos_x[i+1] = -1
+  pontos_x = [x for x in pontos_x if x != -1] 
+  return pontos_x
+
+def separarCaracteres(pontos_x):
+  for i in range(0, len(pontos_x)-1, 2):
+    if (pontos_x[i+1]-pontos_x[i]) > 14: #corta no meio o que é muito grande
+      e = int((pontos_x[i] + pontos_x[i + 1]) / 2)
+      pontos_x.append(e)
+      pontos_x.append(e+1)
+  pontos_x.sort()
+  return pontos_x
+
+def eliminarSegmentosExcedentes(pontos_x, width):
+  if len(pontos_x) > 14:
+    inicio = [x for x in pontos_x if x <= int(width / 2)]   #segmentos da primeira metade da placa
+    fim = [x for x in pontos_x if x > int(width / 2)]       #segmentos da segunda metade da placa
+    #se ambas as listas de segmentos estiverem com numero par de pontos, tira um da primeira metade e coloca na segunda metade
+    if len(inicio) % 2 and len(fim) % 2:                    
+      fim.insert(0, inicio.pop())
+
+    #se a primeira metade tiver mais que 6 pontos, tirar os excedentes no inicio
+    if len(inicio) > 6:
+      dif = len(inicio) - 6
+      del pontos_x[:dif]
+
+    #se a segunda metade tiver mais que 8 pontos, tirar os excedentes no fim
+    if len(fim) > 8:
+      dif = len(fim) - 8
+      del pontos_x[-dif:]
+  return pontos_x
+
+
 def dilata(img):
 	preDilatar = 255 - img;
 	kernel = np.array([[0, 0, 0],
@@ -129,9 +170,18 @@ def segmenta(img):
   height, width = img_binaria.shape       #pegar novos tamanhos da imagem
 
   lista_projecao_v = projecaoVertical(img_binaria, width, height)
-  mins_v = minimosLocais(lista_projecao_v)
+  mins_v = minimosLocais(lista_projecao_v)  #pontos em x de cada segmento
   
+  #Tratamento da segmentação
+  mins_v = eliminarFalsoCaracteres(img_binaria, mins_v)
+  
+  mins_v = separarCaracteres(mins_v)
+
+  mins_v = eliminarSegmentosExcedentes(mins_v, width)
+
   mins_h = list(map(lambda x: x + topo, mins_h))          
   img_original = bounding_box(img_original, mins_v, mins_h)   #adicionar bounding boxes na imagem
   
+   
+
   return img_original
