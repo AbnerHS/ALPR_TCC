@@ -12,9 +12,10 @@ def main():
     img_carro, img_placa = encontra.encontraPlaca(img)
     acertos += len(img_placa)
     for placa in img_placa:
-      img_binaria = char.segmenta(placa)
-      plt.imshow(cv2.cvtColor(img_binaria, cv2.COLOR_BGR2RGB))
-      plt.show()
+      segmentos = char.segmenta(placa)
+      for seg in segmentos:
+        plt.imshow(cv2.cvtColor(seg, cv2.COLOR_BGR2RGB))
+        plt.show()
   print(acertos)
   
 if __name__ == '__main__':

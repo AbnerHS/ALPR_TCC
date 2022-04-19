@@ -180,8 +180,14 @@ def segmenta(img):
   mins_v = eliminarSegmentosExcedentes(mins_v, width)
 
   mins_h = list(map(lambda x: x + topo, mins_h))          
-  img_original = bounding_box(img_original, mins_v, mins_h)   #adicionar bounding boxes na imagem
+  img_boxes = bounding_box(img_original.copy(), mins_v, mins_h)   #adicionar bounding boxes na imagem
   
-   
+  plt.imshow(cv2.cvtColor(img_boxes, cv2.COLOR_BGR2RGB))
+  plt.show()
+  segmentos = []
 
-  return img_original
+  for i in range(0, len(mins_v)-1, 2):
+    segmento = img_original[mins_h[0]:mins_h[1], mins_v[i]:mins_v[i+1]]
+    segmentos.append(segmento)
+
+  return segmentos
