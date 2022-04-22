@@ -1,3 +1,5 @@
 imagens
 yolo/*.weights
 __pycache__
+placas
+SSIG-SegPlate
