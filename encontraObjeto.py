@@ -1,13 +1,13 @@
 import cv2
 import numpy as np
 
-def encontraPlaca(img):
-    weights = "yolo/yolov3_training_6000.weights"
-    cfg = "yolo/yolov3_training.cfg"
+def encontraObjeto(img, weights, cfg, classes):
+    # weights = "yolo/yolov4_tiny_training_last.weights"
+    # cfg = "yolo/yolov4_tiny_training.cfg"
     net = cv2.dnn.readNet(weights, cfg)
     layer_names = net.getLayerNames()
     output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
-    classes = ['mercosul','antiga']
+    # classes = ['frente','traseira']
     
     height, width, _ = img.shape
 
@@ -19,6 +19,7 @@ def encontraPlaca(img):
     boxes = []
     class_ids = []
     img_cortada = []
+    label = ""
     for out in outs:
         for detection in out:
             scores = detection[5:]
@@ -43,9 +44,16 @@ def encontraPlaca(img):
         if i in indexes:
             x, y, w, h = boxes[i]
             color = (0,255,0)
-            img_cortada.append(img.copy()[y:y+h,x:x+w])
+            if x < 0:
+                x = 0
+            if y < 0:
+                y = 0
+            corte = img.copy()[y:y+h,x:x+w]
+            img_cortada.append(corte)
             cv2.rectangle(img, (x, y), (x + w, y + h), color, 8)
             label = str(classes[class_ids[i]])
             cv2.putText(img, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 4)
     img = cv2.resize(img, None, fx=0.6, fy=0.6)
-    return [img, img_cortada]
+    cv2.imshow("Carro", img)
+    cv2.waitKey()
+    return [img_cortada, label]
