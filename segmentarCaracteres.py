@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import os
 
 def binarizar(img):
   return cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 8)
@@ -182,8 +181,10 @@ def segmenta(img):
   mins_h = list(map(lambda x: x + topo, mins_h))          
   img_boxes = bounding_box(img_original.copy(), mins_v, mins_h)   #adicionar bounding boxes na imagem
   
-  plt.imshow(cv2.cvtColor(img_boxes, cv2.COLOR_BGR2RGB))
-  plt.show()
+  #Mostrar imagem original com bounding boxes
+  # plt.imshow(cv2.cvtColor(img_boxes, cv2.COLOR_BGR2RGB))
+  # plt.show()
+
   segmentos = []
 
   for i in range(0, len(mins_v)-1, 2):
