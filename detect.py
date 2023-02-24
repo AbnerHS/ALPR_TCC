@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-def detect_object_in_image(net, img, classes, size=(416, 416), show = False):
+def detect_object_in_image(net, img, classes, size=(416, 416), show = False, ocr = False):
     layer_names = net.getLayerNames()
     output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
     
@@ -17,6 +17,7 @@ def detect_object_in_image(net, img, classes, size=(416, 416), show = False):
     classIds = []
     label = ""
     saidas = []
+
     #iterar saídas
     for out in outs:
         for detection in out:
@@ -41,6 +42,11 @@ def detect_object_in_image(net, img, classes, size=(416, 416), show = False):
     indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
     posX = []
     posY = []
+    labels = []
+    if ocr:
+        #criar espaço vazio para mostrar caracteres
+        img_blank = np.zeros((int(height), width, 3), np.uint8)
+        img = cv2.vconcat([img, img_blank])
     for i in range(len(boxes)):
         if i in indexes:
             x, y, w, h = boxes[i]
@@ -53,23 +59,50 @@ def detect_object_in_image(net, img, classes, size=(416, 416), show = False):
                 y = 0
             
             #centralizar posição da label
-            posX.append(x+70)
-            posY.append(y+h+30)
+            posX.append(x)
+            posY.append(y+h)
             segmento = img.copy()[y:y+h,x:x+w]
             label = str(classes[classIds[i]])
             saidas.append({
                 "img" : segmento,
                 "label" : label
             })
+            if ocr:
+                labels.append(label)
             #colocar bouding box e label na imagem
             if show:
-                text = "{}: {:.3f}".format(label, confidences[i])
-                cv2.rectangle(img, (x, y), (x + w, y + h), color, 8)
-                cv2.putText(img, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-    
+                #mostrar caracteres
+                if ocr:
+                    cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
+                    cv2.putText(img, label, (x, y + 50), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 1)
+                else:
+                    text = "{}: {:.3f}".format(label, confidences[i])
+                    cv2.rectangle(img, (x, y), (x + w, y + h), color, 8)
+                    cv2.putText(img, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
     #mostrar imagem
     if show:
         cv2.imshow("Image", img)
         cv2.waitKey()
+
+    if ocr:
+        placa = ""
+        swapLetterToNumber = {'5': 'S', '7': 'Z', '1': 'I', '8': 'B', '2': 'Z', '4': 'A', '6': 'G', '0': 'O'}
+        swapNumberToLetter = {'Q': '0', 'D': '0', 'Z': '7', 'S': '5', 'J': '1', 'I': '1', 'A': '4', 'B': '8', 'O': '0'}
+        labels = [x for _,x in sorted(zip(posX, labels))]
+        labels = ''.join(labels)
+        index = 0
+        for char in labels:
+            if index < 3:
+                if char.isdigit():
+                    char = swapLetterToNumber.get(char, char) #swap numero para letra
+            elif index == 4:
+                pass
+            else:
+                if not char.isdigit():
+                    char = swapNumberToLetter.get(char, char) #swap letra para numero
+            placa += str(char)
+            index += 1    
+        
+        return placa
 
     return saidas, posX, posY

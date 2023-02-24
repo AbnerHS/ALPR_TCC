@@ -72,8 +72,7 @@ def teste_imagens(metodoOcr):
           imgCaracteres = segmenta(placa["img"])
           placaOcr = reconhecer(imgCaracteres, placa["label"])        
         elif metodoOcr == 0:
-          placaOcr = ocr_in_image(netOCR, placa["img"], classesOcr)
-        
+          placaOcr = detect_object_in_image(netOCR, placa["img"], classesOcr, size=(352, 128), ocr=True)
         endOCR = time.time() - startOCR
         tempoTotalOCR += endOCR
         placaReal = ler_txt(image[:-4])
