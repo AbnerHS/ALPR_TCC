@@ -4,6 +4,7 @@ import glob
 import math
 import time
 import utils
+import matplotlib.pyplot as plt
 
 def converter(cantoSuperior, cantoInferior, classe):
     posX = math.ceil((cantoInferior[0] + cantoSuperior[0])/2)
@@ -14,7 +15,6 @@ def converter(cantoSuperior, cantoInferior, classe):
                 return letra
                 break
     return ''
-
 
 
 def maximos(vetor):
@@ -62,93 +62,34 @@ def preprocessamento(image):
     image = image[listaH[0]:listaH[1]+1,listaV[0]:listaV[1]+1]
     return image
 
-def reconhecer(images, classe, origem=0):
+def reconhecer(images, classe, show=False):
     i = 0
     placa = ''
     for template in images:
-        if(origem == 1):
-            template = cv.imread(template, 0)
-        else:
-          template = cv.cvtColor(template, cv.COLOR_BGR2GRAY)
-        # plt.subplot(1, 2, 1)
-        # plt.imshow(cv.cvtColor(template, cv.COLOR_BGR2RGB))
-        _, template = cv.threshold(template, 0, 255, cv.THRESH_BINARY+cv.THRESH_OTSU)
-        # plt.subplot(1, 2, 2)
-        # plt.imshow(cv.cvtColor(template, cv.COLOR_BGR2RGB))
-        # plt.show()
-        # template = cv.adaptiveThreshold(template, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 5, 5)
-        # template = cv.adaptiveThreshold(template, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 3, 8)
-        # plt.subplot(1, 2, 1)
-        # plt.imshow(cv.cvtColor(template, cv.COLOR_BGR2RGB))
+        template = cv.cvtColor(template, cv.COLOR_BGR2GRAY) #converter imagem para tons de cinza
+        _, template = cv.threshold(template, 0, 255, cv.THRESH_BINARY+cv.THRESH_OTSU)   #threshold de otsu
         template = preprocessamento(template)
         template = cv.resize(template, (25,40))
-        kernel = np.ones((3, 3), np.uint8)
-        template = cv.erode(template, kernel, iterations=1)
-        # plt.subplot(1, 2, 2)
-        # plt.imshow(cv.cvtColor(template, cv.COLOR_BGR2RGB))
-        # plt.show()
-        # cv.imshow("normal", template)
+        kernel = np.ones((3, 3), np.uint8)  #matriz 3x3 de 1
+        template = cv.erode(template, kernel, iterations=1) #erosão           
         w, h = template.shape[::-1]
         if i < 3:
             mapa = cv.imread('templates/template_letras_'+classe+'.jpg', 0)
-        elif i == 4 and classe == 'mercosul':
+        elif i == 4 and classe == 'mercosul':   #se for o quinto caractere e mercosul -> comparar apenas com letras
             mapa = cv.imread('templates/template_letras_mercosul.jpg', 0)
         else:
             mapa = cv.imread('templates/template_numeros_'+classe+'.jpg', 0)
-
-        # if i < 3:
-        #     mapa = cv.imread('template_letras_mercosul.jpg', 0)
-        # elif i == 4:
-        #     mapa = cv.imread('template.jpg', 0)
-        # else:
-        #     mapa = cv.imread('template_numeros_mercosul.jpg', 0)
-
-        img2 = mapa.copy()
-        res = cv.matchTemplate(img2, template, cv.TM_CCOEFF)
-        min_val, max_val, min_loc, max_loc = cv.minMaxLoc(res)
+        
+        res = cv.matchTemplate(mapa, template, cv.TM_CCOEFF)
+        _, _, _, max_loc = cv.minMaxLoc(res)    #localização do caractere com maior proximidade
         bottom_right = (max_loc[0] + w, max_loc[1] + h)
-        cv.rectangle(img2, max_loc, bottom_right, 0, 2)
-        placa += converter(max_loc, bottom_right, classe)
-        # plt.subplot(1, 2, 1)
-        # plt.imshow(cv.cvtColor(template, cv.COLOR_BGR2RGB))
-        # plt.subplot(1, 2, 2)
-        # plt.imshow(cv.cvtColor(img2, cv.COLOR_BGR2RGB))
-        # plt.show()
-        # cv.imshow("imagem", img2)
-        # cv.waitKey(0)
+        placa += converter(max_loc, bottom_right, classe)   #obter caractere ASCII da localização encontrada
         i += 1
+
+        if show:
+            cv.rectangle(mapa, max_loc, bottom_right, 0, 2) #colocar bounding box no caractere
+            cv.imshow("Template", template)
+            cv.imshow("Image", mapa)
+            cv.waitKey()
+
     return placa
-
-
-def main():
-    tipos = ['mercosul','antiga']
-    placaCorreta = 0
-    placaTotal = 0
-    letraCorreta = 0
-    letraTotal = 0
-    media = 0
-    for tipo in tipos:
-        pastas = glob.glob('caracteres/'+tipo+'/*')
-        for pasta in pastas:
-            label = pasta.split('\\')[1]
-            images = glob.glob(pasta+"/*.jpg")
-            i = 0
-            start = time.time()
-            placa = reconhecer(images,tipo,1)
-            end = time.time()
-            media += (end - start)
-            placaTotal += 1
-            if label == placa:
-                placaCorreta += 1
-                print('Label:', label, 'Placa:', placa, 'OK')
-            else:
-                print('Label:', label, 'Placa:', placa, 'ERRO')
-            for i in range(len(placa)):
-                letraTotal += 1
-                if placa[i] == label[i]:
-                    letraCorreta += 1
-    print("Placas Corretas: ", placaCorreta, " Total: ", placaTotal)
-    print("Letras Corretas: ", letraCorreta, " Total: ", letraTotal)
-    print(media)
-if __name__ == '__main__':
-    main()

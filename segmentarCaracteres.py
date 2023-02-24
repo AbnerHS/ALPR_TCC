@@ -1,6 +1,4 @@
 import cv2
-import numpy as np
-import matplotlib.pyplot as plt
 
 def binarizar(img):
   return cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 8)
@@ -25,7 +23,7 @@ def projecaoVertical(img, width, height):
     for y in range(height):
       if img[y][x] == 0:
         countH += 1
-    countH = 0 if countH < 2 else countH
+    countH = 0 if countH < 3 else countH
     lista.append(countH)
   return lista
 
@@ -69,7 +67,7 @@ def eliminarFalsoCaracteres(img, pontos_x):
     imgCopy = imgCopy[:,pontos_x[i]:pontos_x[i+1]]
     height, width = imgCopy.shape
     lista_projecao_h = projecaoHorizontal(imgCopy, width, height)
-    if sum(lista_projecao_h) < 20:
+    if sum(lista_projecao_h) < 40:
       pontos_x[i] = -1
       pontos_x[i+1] = -1
   pontos_x = [x for x in pontos_x if x != -1] 
@@ -77,7 +75,7 @@ def eliminarFalsoCaracteres(img, pontos_x):
 
 def separarCaracteres(pontos_x):
   for i in range(0, len(pontos_x)-1, 2):
-    if (pontos_x[i+1]-pontos_x[i]) > 14: #corta no meio o que é muito grande
+    if (pontos_x[i+1]-pontos_x[i]) > 30: #corta no meio o que é muito grande
       e = int((pontos_x[i] + pontos_x[i + 1]) / 2)
       pontos_x.append(e)
       pontos_x.append(e+1)
@@ -104,57 +102,10 @@ def eliminarSegmentosExcedentes(pontos_x, width):
   return pontos_x
 
 
-def dilata(img):
-	preDilatar = 255 - img;
-	kernel = np.array([[0, 0, 0],
-					   [0, 1, 0],
-					   [0, 1, 0]], np.uint8)
-	dilatar = cv2.dilate(preDilatar, kernel, iterations=1)
-	dilatar = 255 - dilatar
-	return dilatar
-
-def view1(img1, img2, img3):
-	plt.subplot(3, 1, 1)
-	plt.imshow(cv2.cvtColor(img1, cv2.COLOR_BGR2RGB))
-	plt.subplot(3, 1, 2)
-	plt.imshow(cv2.cvtColor(img2, cv2.COLOR_BGR2RGB))
-	plt.subplot(3, 1, 3)
-	plt.imshow(cv2.cvtColor(img3, cv2.COLOR_BGR2RGB))
-	plt.show()
-
-def view2(img1, img2, y1, listaV, x3, listaMax):
-	plt.subplot(4, 1, 1)
-	plt.imshow(cv2.cvtColor(img1, cv2.COLOR_BGR2RGB))
-	plt.subplot(4, 1, 2)
-	plt.bar(y1, listaV, color='black')
-	plt.subplot(4, 1, 3)
-	plt.scatter(listaMax, x3, color = 'black')
-	plt.subplot(4, 1, 4)
-	plt.imshow(cv2.cvtColor(img2, cv2.COLOR_BGR2RGB))
-	plt.show()
-
-def view3(img1, x1, listaH, x2, listaMin, img2):
-	plt.subplot(4, 1, 1)
-	plt.imshow(cv2.cvtColor(img1, cv2.COLOR_BGR2RGB))
-	plt.subplot(4, 1, 2)
-	plt.bar(x1, listaH, color='black')
-	plt.subplot(4, 1, 3)
-	plt.scatter(listaMin, x2, color='black')
-	plt.subplot(4, 1, 4)
-	plt.imshow(cv2.cvtColor(img2, cv2.COLOR_BGR2RGB))
-	plt.show()
-
-def view4(img1, img2):
-	plt.subplot(2, 1, 1)
-	plt.imshow(cv2.cvtColor(img1, cv2.COLOR_BGR2RGB))
-	plt.subplot(2, 1, 2)
-	plt.imshow(cv2.cvtColor(img2, cv2.COLOR_BGR2RGB))
-	plt.show()
-
-def segmenta(img):
-  img_original = cv2.resize(img.copy(), (90, 30))
+def segmenta(img, show = False):
+  img_original = cv2.resize(img.copy(), (180, 60))
   img = rgbToGray(img)
-  img = cv2.resize(img, (90, 30))
+  img = cv2.resize(img, (180, 60))
   height, width = img.shape
   topo = int(height * 0.3)                                    #tamanho da sarjeta da placa
   height -= topo
@@ -173,18 +124,17 @@ def segmenta(img):
   
   #Tratamento da segmentação
   mins_v = eliminarFalsoCaracteres(img_binaria, mins_v)
-  
   mins_v = separarCaracteres(mins_v)
-
   mins_v = eliminarSegmentosExcedentes(mins_v, width)
 
-  mins_h = list(map(lambda x: x + topo, mins_h))          
-  img_boxes = bounding_box(img_original.copy(), mins_v, mins_h)   #adicionar bounding boxes na imagem
-  
-  #Mostrar imagem original com bounding boxes
-  # plt.imshow(cv2.cvtColor(img_boxes, cv2.COLOR_BGR2RGB))
-  # plt.show()
+  mins_h = list(map(lambda x: x + topo, mins_h))  #somar valor do topo que foi retirado
 
+  if show:
+    img_boxes = bounding_box(img_original.copy(), mins_v, mins_h)   #adicionar bounding boxes na imagem
+    # Mostrar imagem original com bounding boxes
+    cv2.imshow("Image", img_boxes)
+    cv2.waitKey()
+    
   segmentos = []
 
   for i in range(0, len(mins_v)-1, 2):
