@@ -2,7 +2,6 @@ import sys
 import cv2
 import glob
 from detect import detect_object_in_image
-from ocr import ocr_in_image
 from segmentarCaracteres import segmenta
 from templateMatching import reconhecer
 import time
