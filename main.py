@@ -1,77 +1,115 @@
+import sys
 import cv2
-import pandas as pd
 import glob
 from detect import detect_object_in_image
 from ocr import ocr_in_image
+from segmentarCaracteres import segmenta
+from templateMatching import reconhecer
+import time
 
-def ler_csv(img_id):
-  test_file = "SSIG-SegPlate/test.csv"
-  df = pd.read_csv(test_file, usecols=['img_id','text'], dtype=str)
-  label = df.loc[df['img_id'] == img_id]['text'].iloc[0]
-  return label
-
-def ler_txt(img_id):
+def ler_txt(imageName):
   i = 0
   placa = ""
-  with open("RodoSol/cars-br/" + img_id + ".txt", "r") as arquivo:
+  with open(imageName + ".txt", "r") as arquivo:
     for linha in arquivo:
       if i == 1:
         placa = linha.strip().split(" ")[1]
       i+=1
   return placa
 
-def teste_imagens():
-  weights_carro = "yolo/yolov4_tiny_carro.weights"
-  cfg_carro = "yolo/yolov4_tiny_carro.cfg"
-  labels_carro = ['veiculo']
-  weights_placa = "yolo/yolov4_tiny_placa.weights"
-  cfg_placa = "yolo/yolov4_tiny_placa.cfg"
-  labels_placa = ['brasileira','mercosul']
-  images_path = sorted(glob.glob("RodoSol/cars-br/*.jpg"))
-  # images_path = glob.glob("SSIG-SegPlate/test/*.png")
-  # images_path = glob.glob("ocr/*.jpg")
-  # images_path = glob.glob("imagens/*.jpg")
+def teste_imagens(metodoOcr):
+  weightsCarro = 'yolo/yolov4_tiny_carro.weights'
+  cfgCarro = 'yolo/yolov4_tiny_carro.cfg'
+  classesCarro = open('yolo/yolov4_tiny_carro.names', 'r').read().splitlines()
+
+  weightsPlaca = 'yolo/yolov4_tiny_placa.weights'
+  cfgPlaca = 'yolo/yolov4_tiny_placa.cfg'
+  classesPlaca = open('yolo/yolov4_tiny_placa.names', 'r').read().splitlines()
+  
+  weightsOcr = "yolo/yolov4_tiny_ocr.weights"
+  cfgOcr = "yolo/yolov4_tiny_ocr.cfg"
+  classesOcr = open('yolo/yolov4_tiny_ocr.names', 'r').read().splitlines()
+
+  netCarro = cv2.dnn.readNet(weightsCarro, cfgCarro)
+  netCarro.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+  netCarro.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+
+  netPlaca = cv2.dnn.readNet(weightsPlaca, cfgPlaca)
+  netPlaca.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+  netPlaca.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+
+  netOCR = cv2.dnn.readNet(weightsOcr, cfgOcr)
+  netOCR.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+  netOCR.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+
+  imagesPath = sorted(glob.glob("RodoSol/cars-*/*.jpg"))
+  imagesPathSize = len(imagesPath)
+
   placaTotal = 0
-  acertosLocalizarPlaca = 0 
-  letraTotal = 0
   letraCorreta = 0
-  letraPlacaCorreta = 0
-  acertosOCR = 0
-  for image in images_path[:]:
-    img = cv2.imread(image)
-    img_carro, _, _, _ = detect_object_in_image(img, weights_carro, cfg_carro, labels_carro)
+  placaCorreta = 0
+
+  tempoTotalCarro = 0
+  tempoTotalPlaca = 0
+  tempoTotalOCR = 0
+  
+  for image in imagesPath:
+    startCarro = time.time()
+    img = cv2.imread(image)    
+    imgCarro, _, _, _ = detect_object_in_image(netCarro, img, classesCarro, size=(480, 480))
+    endCarro = time.time() - startCarro
+    tempoTotalCarro += endCarro
     placaTotal += 1
-    for carro in img_carro:
-      # cv2.imwrite("RodoSol/treino-me/"+str(i)+ "_" +image.split("\\")[1], carro)
-      # i = 0
-      img_placa, _, _, _ = detect_object_in_image(carro, weights_placa, cfg_placa, labels_placa, size=(480, 480))
-      acertosLocalizarPlaca += 1
-      for placa in img_placa:
-        # image_name = "placas/toOcr/" + image.split("\\")[1].split(".")[0] + "_" + str(i) + ".jpg"
-        # cv2.imwrite(image_name, placa)
-        # i+=1
-        # img_caracteres = segmenta.segmenta(placa)
-        # caracteres = templateMatching.reconhecer(img_caracteres, tipo_placa)
-        # label = ler_csv(image.split("\\")[1][:-4])
-        caracteres = ocr_in_image(placa)
-        label = ler_txt(image.split("\\")[1][:-4])
-        if len(caracteres) <= 7:
-          letraPlacaCorreta = 0
-          for i in range(len(caracteres)):
-            letraTotal += 1
-            if caracteres[i] == label[i]:
-              letraPlacaCorreta += 1
-              letraCorreta += 1
-          print(str(placaTotal) + ' - Label:', label, 'Placa:', caracteres, letraPlacaCorreta, end='')
-          if(label == caracteres):
-            print(" OK")
-            acertosOCR += 1
-          else:
-            print(" ERRO")
-  print("{} placas corretas de {} - {} letras corretas de {}".format(acertosOCR, acertosLocalizarPlaca, letraCorreta, letraTotal))
+    for carro in imgCarro:
+      startPlaca = time.time()
+      imgPlaca, tipoPlaca, _, _ = detect_object_in_image(netPlaca, carro, classesPlaca, size=(416, 416))
+      endPlaca = time.time() - startPlaca
+      tempoTotalPlaca += endPlaca
+      for placa in imgPlaca:
+        startOCR = time.time()
+        placaOcr = ""
+        if metodoOcr == 1:
+          imgCaracteres = segmenta(placa)
+          placaOcr = reconhecer(imgCaracteres, tipoPlaca)        
+        elif metodoOcr == 0:
+          placaOcr = ocr_in_image(netOCR, placa, classesOcr)
+        
+        endOCR = time.time() - startOCR
+        tempoTotalOCR += endOCR
+        placaReal = ler_txt(image[:-4])
+        for i in range(len(placaOcr)):
+          if i == len(placaReal):
+            break
+          if placaOcr[i] == placaReal[i]:
+            letraCorreta += 1
+        print("{} - Real: {} OCR: {}".format(placaTotal, placaReal, placaOcr), end='')
+        if placaReal == placaOcr:
+          print(" OK")
+          placaCorreta += 1
+        else:
+          print(" ERRO")
+  
+  tempoMedioCarro = tempoTotalCarro / imagesPathSize * 1000
+  tempoMedioPlaca = tempoTotalPlaca / imagesPathSize * 1000
+  tempoMedioOCR = tempoTotalOCR / imagesPathSize * 1000
+  tempoMedioTotal = tempoMedioCarro + tempoMedioPlaca + tempoMedioOCR
+  print("{} placas corretas - {} letras corretas - tempo médio: {:.2f} ms".
+    format(
+      placaCorreta,  
+      letraCorreta, 
+      tempoMedioTotal
+    )
+  )
+    
+  print("veículo: {:.2f} ms \nplaca: {:.2f} ms \nocr: {:.2f} ms".format(tempoMedioCarro, tempoMedioPlaca, tempoMedioOCR))
   
 def main():
-  teste_imagens()
+  args = sys.argv[1:] #0 OCR com YOLO - 1 OCR com template matching
+  if not len(args):
+    teste_imagens(0)
+  else:
+    teste_imagens(int(args[0]))
+
   
 if __name__ == '__main__':
   main()
