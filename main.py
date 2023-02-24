@@ -25,7 +25,7 @@ def teste_imagens(metodoOcr):
   weightsPlaca = 'yolo/yolov4_tiny_placa.weights'
   cfgPlaca = 'yolo/yolov4_tiny_placa.cfg'
   classesPlaca = open('yolo/yolov4_tiny_placa.names', 'r').read().splitlines()
-  
+
   weightsOcr = "yolo/yolov4_tiny_ocr.weights"
   cfgOcr = "yolo/yolov4_tiny_ocr.cfg"
   classesOcr = open('yolo/yolov4_tiny_ocr.names', 'r').read().splitlines()
@@ -56,23 +56,23 @@ def teste_imagens(metodoOcr):
   for image in imagesPath:
     startCarro = time.time()
     img = cv2.imread(image)    
-    imgCarro, _, _, _ = detect_object_in_image(netCarro, img, classesCarro, size=(480, 480))
+    carroDetected, _, _ = detect_object_in_image(netCarro, img, classesCarro, size=(480, 480))
     endCarro = time.time() - startCarro
     tempoTotalCarro += endCarro
     placaTotal += 1
-    for carro in imgCarro:
+    for carro in carroDetected:
       startPlaca = time.time()
-      imgPlaca, tipoPlaca, _, _ = detect_object_in_image(netPlaca, carro, classesPlaca, size=(416, 416))
+      placaDetected, _, _ = detect_object_in_image(netPlaca, carro["img"], classesPlaca, size=(416, 416))
       endPlaca = time.time() - startPlaca
       tempoTotalPlaca += endPlaca
-      for placa in imgPlaca:
+      for placa in placaDetected:
         startOCR = time.time()
         placaOcr = ""
         if metodoOcr == 1:
-          imgCaracteres = segmenta(placa)
-          placaOcr = reconhecer(imgCaracteres, tipoPlaca)        
+          imgCaracteres = segmenta(placa["img"])
+          placaOcr = reconhecer(imgCaracteres, placa["label"])        
         elif metodoOcr == 0:
-          placaOcr = ocr_in_image(netOCR, placa, classesOcr)
+          placaOcr = ocr_in_image(netOCR, placa["img"], classesOcr)
         
         endOCR = time.time() - startOCR
         tempoTotalOCR += endOCR
