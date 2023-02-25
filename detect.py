@@ -63,22 +63,21 @@ def detect_object_in_image(net, img, classes, size=(416, 416), show = False, ocr
             posY.append(y+h)
             segmento = img.copy()[y:y+h,x:x+w]
             label = str(classes[classIds[i]])
+            labels.append(label)
+            
             saidas.append({
                 "img" : segmento,
                 "label" : label
             })
-            if ocr:
-                labels.append(label)
+            
             #colocar bouding box e label na imagem
-            if show:
-                #mostrar caracteres
-                if ocr:
-                    cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
-                    cv2.putText(img, label, (x, y + 50), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 1)
-                else:
-                    text = "{}: {:.3f}".format(label, confidences[i])
-                    cv2.rectangle(img, (x, y), (x + w, y + h), color, 8)
-                    cv2.putText(img, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+            if ocr:
+                cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
+                cv2.putText(img, label, (x, y + 50), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 1)
+            else:
+                text = "{}: {:.3f}".format(label, confidences[i])
+                cv2.rectangle(img, (x, y), (x + w, y + h), color, 8)
+                cv2.putText(img, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
     #mostrar imagem
     if show:
         cv2.imshow("Image", img)
