@@ -43,7 +43,7 @@ def detect_object_in_image(net, img, classes, size=(416, 416), show = False, ocr
     posX = []
     posY = []
     labels = []
-    if ocr:
+    if ocr and show:
         #criar espaço vazio para mostrar caracteres
         img_blank = np.zeros((int(height), width, 3), np.uint8)
         img = cv2.vconcat([img, img_blank])
