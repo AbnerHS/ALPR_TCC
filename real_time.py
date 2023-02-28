@@ -49,7 +49,6 @@ def calculate_fps(prev_frame_time):
 def main():
   prev_frame_time = 0
   cam = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-  cam.set(cv2.CAP_PROP_AUTOFOCUS, 1)
   totalFps = 0
   totalFpsMovel = 0
   mediaFpsMovel = 0
